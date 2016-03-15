@@ -16,6 +16,8 @@ var streznik = http.createServer(function(zahteva, odgovor) {
        posredujOsnovnoStran(odgovor);
    } else if (zahteva.url == '/datoteke') { 
        posredujSeznamDatotek(odgovor);
+   } else if (zahteva.url.startsWith("/poglej")) {
+       posredujStaticnoVsebino(odgovor, dataDir + zahteva.url.replace("/poglej", ""), "");
    } else if (zahteva.url.startsWith('/brisi')) { 
        izbrisiDatoteko(odgovor, dataDir + zahteva.url.replace("/brisi", ""));
    } else if (zahteva.url.startsWith('/prenesi')) { 
@@ -36,13 +38,13 @@ function posredujStaticnoVsebino(odgovor, absolutnaPotDoDatoteke, mimeType) {
             if (datotekaObstaja) {
                 fs.readFile(absolutnaPotDoDatoteke, function(napaka, datotekaVsebina) {
                     if (napaka) {
-                        //Posreduj napako
+                        posredujNapako404(odgovor);
                     } else {
                         posredujDatoteko(odgovor, absolutnaPotDoDatoteke, datotekaVsebina, mimeType);
                     }
                 })
             } else {
-                //Posreduj napako
+                posredujNapako404(odgovor);
             }
         })
 }
@@ -61,7 +63,7 @@ function posredujSeznamDatotek(odgovor) {
     odgovor.writeHead(200, {'Content-Type': 'application/json'});
     fs.readdir(dataDir, function(napaka, datoteke) {
         if (napaka) {
-            //Posreduj napako
+            posredujNapako500(odgovor);
         } else {
             var rezultat = [];
             for (var i=0; i<datoteke.length; i++) {
@@ -88,10 +90,26 @@ function naloziDatoteko(zahteva, odgovor) {
         var datoteka = this.openedFiles[0].name;
         fs.copy(zacasnaPot, dataDir + datoteka, function(napaka) {  
             if (napaka) {
-                //Posreduj napako
+                posredujNapako404(odgovor);
             } else {
                 posredujOsnovnoStran(odgovor);        
             }
         });
     });
+}
+
+streznik.listen(process.env.PORT, function() {
+    console.log("Streznik laufa.");
+})
+
+function posredujNapako404(odgovor) {
+    odgovor.writeHead(404, {"Content-Type": "text/plain"})
+    odgovor.write("ni ga");
+    odgovor.end();
+}
+
+function posredujNapako500(odgovor) {
+    odgovor.writeHead(500, {"Content-Type": "text/plain"})
+    odgovor.write("ne dela");
+    odgovor.end();
 }
